@@ -3,7 +3,6 @@ package main
 import (
     "fmt"
     "net/http"
-    "time"
 )
 
 var domains = []string{
@@ -21,7 +20,7 @@ func checkDomain(domain string, ch chan string) {
     }
 }
 
-func main() {
+func handler(w http.ResponseWriter, r *http.Request) {
     ch := make(chan string)
     for _, domain := range domains {
         go checkDomain(domain, ch)
@@ -30,9 +29,15 @@ func main() {
     for range domains {
         result := <-ch
         if result != "" {
-            fmt.Printf("Redirecting to %s\n", result)
+            http.Redirect(w, r, result, http.StatusFound)
             return
         }
     }
-    fmt.Println("No domains are online.")
+    http.Error(w, "No domains are online.", http.StatusNotFound)
+}
+
+func main() {
+    http.HandleFunc("/redirect", handler)
+    fmt.Println("Server is running on port 3000")
+    http.ListenAndServe(":3000", nil)
 }
